@@ -40,7 +40,7 @@ Omaha will never ask for a password, a GitHub token or a private key. If anythin
 
 ### 2. Add Omaha and say hi
 
-Open this link and add Omaha to your Grok Bots: [Omaha template link]. If it doesn't open on your phone, open the link on a computer.
+[Add Omaha to your Grok Bots](https://x.ai/bot/baSgCPYf4eBS6CoL9ZzV3). If the link doesn't open on your phone, open it on a computer.
 
 Open a chat with Omaha and say hi. It starts by checking that you have everything from step 1.
 
