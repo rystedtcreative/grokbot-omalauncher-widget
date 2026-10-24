@@ -4,6 +4,9 @@
 # Never prints tokens. Refuses a public repo. Commits and pushes only when the feed changed.
 set -eu
 
+# gh must ask the same host git pushes to.
+unset GH_HOST GH_REPO
+
 FEED_DIR=${GROKBOT_FEED_DIR:-/workspace/grokbot-widget-feed}
 AGENTS_DIR=
 INCLUDE_DESC=0
@@ -35,7 +38,9 @@ valid_repo() {
 }
 
 # url.*.insteadOf and pushInsteadOf are applied to an explicit push URL.
-# Anything that mentions github.com can send the feed somewhere else.
+# Refuse any rule that mentions github.com, and any rule whose value is a
+# prefix of a URL we use for $REPO (a broad rule like insteadOf = "https://"
+# never names github.com but still rewrites it).
 refuse_github_rewrite() {
   if [ -n "${1:-}" ]; then
     rewrite_rc=0
@@ -48,10 +53,23 @@ refuse_github_rewrite() {
     echo "error: could not read git url rewrite config. Not pushing." >&2
     exit 1
   fi
+  [ -n "$rewrites" ] || return 0
   if printf '%s\n' "$rewrites" | grep -i -q github.com; then
     echo "error: git url insteadOf or pushInsteadOf would rewrite a github.com URL. Not pushing." >&2
     exit 1
   fi
+  printf '%s\n' "$rewrites" | while IFS= read -r line; do
+    val=${line#* }
+    [ "$val" != "$line" ] || val=
+    for target in "https://github.com/${REPO}.git" "git@github.com:${REPO}.git" "ssh://git@github.com/${REPO}.git"; do
+      case "$target" in
+        "$val"*)
+          echo "error: git url insteadOf or pushInsteadOf would rewrite a github.com URL. Not pushing." >&2
+          exit 1
+          ;;
+      esac
+    done
+  done || exit 1
 }
 
 while [ $# -gt 0 ]; do
@@ -252,5 +270,5 @@ if [ "$origin_push" != "$push_url" ]; then
 fi
 
 git -C "$FEED_DIR" commit -m "Update Grok Bot widget feed"
-git -C "$FEED_DIR" push "$push_url" HEAD:refs/heads/main
+git -C "$FEED_DIR" push "$push_url" "HEAD:refs/heads/${def:-main}"
 echo "feed pushed"

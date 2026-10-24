@@ -6,6 +6,9 @@
 # when this gh version has that flag.
 set -eu
 
+# gh must talk to github.com, not another host.
+unset GH_HOST GH_REPO
+
 REPO=
 TITLE=omalauncher-phone
 KEYFILE=

@@ -540,6 +540,22 @@ if grep -q "network git:" "$GIT_WRAP_LOG"; then
   exit 1
 fi
 
+# A broad rewrite that never names github.com is still refused.
+for rule in 'insteadOf = https://' 'pushInsteadOf = https://' 'insteadOf = git@'; do
+  printf '%s\n' '[url "https://evil.example/"]' "	$rule" > "$TMP/gitconfig-broad"
+  reset_log
+  : > "$GIT_WRAP_LOG"
+  ln -sf gh-deny "$TMP/bin/gh"
+  expect_rc 1 env PATH="$TMP/bin:$PATH" GIT_CONFIG_GLOBAL="$TMP/gitconfig-broad" \
+    GROKBOT_FEED_DIR="$TMP/not-a-feed" \
+    "$ROOT/scripts/publish-feed.sh" --repo example/grokbot-widget-feed
+  grep -q "would rewrite" "$TMP/e"
+  if grep -q "network git:" "$GIT_WRAP_LOG"; then
+    echo "broad rewrite ($rule) reached a network git command" >&2
+    exit 1
+  fi
+done
+
 # A rewrite that never mentions github.com is not refused here.
 printf '%s\n' '[url "https://example.com/mirror"]' '	insteadOf = https://gitlab.com/' > "$TMP/gitconfig-ok"
 reset_log
@@ -564,7 +580,7 @@ if grep -E -n '[[:space:]]push[[:space:]]+(-u[[:space:]]+)?("?\$\{?origin\}?|ori
   echo "publish-feed.sh pushes via origin" >&2
   exit 1
 fi
-grep -q 'HEAD:refs/heads/main' scripts/publish-feed.sh
+grep -q -F 'HEAD:refs/heads/${def:-main}' scripts/publish-feed.sh
 grep -q 'https://github.com/${REPO}.git' scripts/publish-feed.sh
 
 # Happy path against a local bare repo. No GitHub calls, no network.
@@ -706,7 +722,7 @@ expect_rc 0 env PATH="$TMP/bin:$PATH" GROKBOT_FEED_DIR="$TMP/checkout" \
   --repo example/grokbot-widget-feed \
   --agents-dir "$ROOT/tests/fixtures/agents"
 grep -q "feed unchanged" "$TMP/o"
-if grep -q -F "HEAD:refs/heads/main" "$GIT_WRAP_LOG"; then
+if grep -q -F "HEAD:refs/heads/" "$GIT_WRAP_LOG"; then
   echo "unchanged feed still tried to push" >&2
   cat "$GIT_WRAP_LOG" >&2
   exit 1
