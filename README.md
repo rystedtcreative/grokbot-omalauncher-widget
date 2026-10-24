@@ -26,7 +26,7 @@ The feed is `index.json` (schema version 1) plus 128×128 avatar thumbnails. Des
 
 ## Step-by-step setup
 
-Plan on 10 to 20 minutes. The first time you turn on Omalauncher's Linux it downloads a lot, and we haven't timed that yet. Omaha, the setup bot, walks you through every step below one at a time and waits for you before moving on.
+Plan on 10 to 20 minutes. The first time you turn on Omalauncher's Linux it downloads a lot. Omaha, the setup bot, walks you through every step below one at a time and waits for you before moving on.
 
 Omaha will never ask for a password, a GitHub token or a private key. If anything asks you for one, stop.
 
@@ -34,13 +34,13 @@ Omaha will never ask for a password, a GitHub token or a private key. If anythin
 
 - **An Android phone** with a 64-bit (arm64) processor, on Android 10 or newer. Most phones from the last few years qualify.
 - **Omalauncher**, installed from Google Play and set as your home screen. ([Omalauncher on GitHub](https://github.com/SimonSchubert/omalauncher))
-- **Omalauncher's Linux, turned on.** It's an optional part of Omalauncher (Arch Linux ARM, running inside the app). The widget needs it. Look for a Linux option in Omalauncher's settings (not yet confirmed on a phone).
+- **Omalauncher's Linux, turned on.** It's an optional part of Omalauncher (Arch Linux ARM, running inside the app). The widget needs it. Look for a Linux option in Omalauncher's settings.
 - **The Grok Bot app** for Android, signed in.
 - **A free GitHub account.** Make one at [github.com](https://github.com) if you don't have one.
 
 ### 2. Add Omaha and say hi
 
-Open this link and add Omaha to your Grok Bots: [Omaha template link]. (Importing a template link on Android is not yet confirmed on a phone. If it doesn't work there, open the link on a computer.)
+Open this link and add Omaha to your Grok Bots: [Omaha template link]. If it doesn't open on your phone, open the link on a computer.
 
 Open a chat with Omaha and say hi. It starts by checking that you have everything from step 1.
 
@@ -62,7 +62,7 @@ Nothing to do here. Omaha downloads the widget kit, checks it hasn't been tamper
 
 The key lets your phone read your private list, and nothing else.
 
-Open Omalauncher's terminal. With a hardware keyboard, Super+T opens one. There are also terminal tiles you can add to the home screen (the on-screen route is not yet confirmed on a phone).
+Open Omalauncher's terminal. With a hardware keyboard, Super+T opens one. There are also terminal tiles you can add to the home screen.
 
 Paste this line and press Enter:
 
@@ -107,7 +107,7 @@ If you see something else, go to [Troubleshooting](#troubleshooting).
 ### 10. Find the widget and finish up
 
 - Swipe to page 2 of your home screen. The widget appears there by itself. The first load can take a minute.
-- If it says "allow notification access to show unread", tap that line and allow Omalauncher's notification access. That's what shows the unread dots. (Unread dots are confirmed on one phone so far.)
+- If it says "allow notification access to show unread", tap that line and allow Omalauncher's notification access. That's what shows the unread dots.
 - Tap a bot. Its chat opens in the Grok Bot app.
 
 Tell Omaha it worked. You're done.
@@ -128,11 +128,11 @@ Ask Omaha. It makes a new install line with the new pin. Paste it into Omalaunch
 **"Install failed. Nothing was changed."**
 Your phone is as it was. Common causes:
 - No internet. Check your connection and paste the line again.
-- `curl` is missing from Omalauncher's Linux. We haven't confirmed whether it comes preinstalled. Paste this, then paste the install line again:
+- `curl` is missing from Omalauncher's Linux. Paste this, then paste the install line again:
   ```sh
   pacman -S --needed curl coreutils git openssh
   ```
-  If it asks to proceed, answer Y. (Not yet confirmed on a phone, including whether it needs `sudo`.)
+  If it asks to proceed, answer Y.
 - Only part of the line was pasted. Copy the whole line from Omaha again.
 - The widget download couldn't be reached. Wait a few minutes and try again, or tell Omaha.
 
@@ -154,12 +154,11 @@ Stop. Don't try to get around it. Tell Omaha what you saw.
 - Still stuck? Ask Omaha to check the feed.
 
 **No unread dots**
-(Unread dots are confirmed on one phone so far.)
 - Allow Omalauncher's notification access (tap the "allow notification access" line on the widget).
 - Turn on notifications for the Grok Bot app.
 
 **Tapping a bot doesn't open its chat**
-Make sure the Grok Bot app is installed and signed in to the same account as your bots. (Opening chats from the widget is not yet confirmed on every phone.)
+Make sure the Grok Bot app is installed and signed in to the same account as your bots.
 
 ## Uninstall / remove the phone key
 

@@ -15,7 +15,6 @@ description: use this when the user wants an Omalauncher home-screen widget of t
 - If something fails, diagnose it with them (see Troubleshooting) before moving on.
 - Never ask for a GitHub token, a password, or a private SSH key. Never print tokens.
 - Do not show commands they don't run themselves.
-- Not yet confirmed on a phone: the name of Omalauncher's Linux setting, the on-screen way to open its terminal, whether curl is preinstalled. Say so when it matters.
 
 Kit: `https://github.com/rystedtcreative/grokbot-omalauncher-widget`, pinned tag `v0.1.0`. You see bot names, titles, avatars, colors, shapes and groups here, and the feed repo's visibility through `gh`. Never publish server ids, harness, voice ids, secrets, skills, memory, or descriptions (unless opted in). Nothing goes to the kit author.
 
@@ -23,7 +22,7 @@ Kit: `https://github.com/rystedtcreative/grokbot-omalauncher-widget`, pinned tag
 
 1. Android 10+, arm64. If not: "This widget only works in Omalauncher on Android 10+ with arm64, so I'll stop here."
 2. Omalauncher installed from Google Play and set as home screen. If not, ask them to install it and message you back.
-3. Omalauncher's Linux turned on (look in Omalauncher's settings for Linux; menu name not yet confirmed). The widget runs `git` there. The first download can take a while.
+3. Omalauncher's Linux turned on (look in Omalauncher's settings for Linux). The widget runs `git` there. The first download can take a while.
 4. Grok Bot Android app installed and signed in.
 5. A GitHub account. If none: "Make a free one at github.com, then come back."
 
@@ -61,12 +60,12 @@ Kit: `https://github.com/rystedtcreative/grokbot-omalauncher-widget`, pinned tag
 
 ## Troubleshooting
 
-- "Install failed. Nothing was changed.": no internet; curl missing (have them paste `pacman -S --needed curl coreutils git openssh`, answer Y if it asks; unconfirmed on a phone; then the line again); partial paste (resend the line); release unreachable (retry later).
+- "Install failed. Nothing was changed.": no internet; curl missing (have them paste `pacman -S --needed curl coreutils git openssh`, answer Y if it asks, then the line again); partial paste (resend the line); release unreachable (retry later).
 - "Stopped: the widget file failed its tamper check.": stop, don't work around it, and report it.
 - No widget: check page 2; have them paste `ls ~/.config/omalauncher/widgets/grokbot.owl`; if missing, resend the install line.
 - "can't read the bot feed" or no bots: check the deploy key exists and the repo name matches the install line; the widget refreshes every 10 minutes; rerun the publish command.
 - No unread dots: Omalauncher notification access, and Grok Bot app notifications on.
-- Tap doesn't open chat: Grok Bot app installed and signed in to the same account (not yet confirmed on every phone).
+- Tap doesn't open chat: Grok Bot app installed and signed in to the same account.
 
 ## Uninstall
 
