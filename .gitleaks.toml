@@ -1,0 +1,10 @@
+title = "grokbot omalauncher widget"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Synthetic values used to test secret scrubbing. Not credentials."
+paths = [
+  '''(?:^|/)tests/fixtures/''',
+]

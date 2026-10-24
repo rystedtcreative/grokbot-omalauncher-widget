@@ -1,0 +1,13 @@
+{
+  "name": "Harbor",
+  "title": "Notes",
+  "description": "Draft notes. token sk-live-FAKEtestvalue1234567890 end.",
+  "avatarShape": "circle",
+  "avatarColor": "green",
+  "serverId": "srv-fake-1",
+  "harness": "fake-harness",
+  "voiceId": "voice-fake",
+  "secrets": {"api": "sk-live-FAKEtestvalue1234567890"},
+  "skills": ["private-skill"],
+  "memory": "do not publish this memory"
+}
