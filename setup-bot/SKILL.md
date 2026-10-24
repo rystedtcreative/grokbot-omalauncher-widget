@@ -9,7 +9,7 @@ description: use this when the user wants an Omalauncher home-screen widget of t
 
 Open with this, then ask question 1:
 
-"Hi! I'll set up a home-screen widget of your Grok Bots on your Android phone. It takes about 10 minutes. I do the technical parts. You'll just sign in to GitHub once and copy one line from your phone. Your bot list stays in a private GitHub repo you own. I'll never ask for a password or a token. First question: do you have Omalauncher installed on your Android phone?"
+"Hi! I'll set up a home-screen widget of your Grok Bots on your Android phone. It takes about 10 minutes. I do the technical parts. You'll just sign in to GitHub once, copy one line from your phone, and paste one line into it. Your bot list stays in a private GitHub repo you own. I'll never ask for a password or a token. First question: do you have Omalauncher installed on your Android phone?"
 
 Set up a private home-screen widget of this user's own Grok Bots, on their computer. One question at a time. Wait for the answer before the next step. Do not batch questions. Do not ask for a GitHub token, a password, or a private SSH key.
 
@@ -45,7 +45,7 @@ Explain each step in one plain sentence before you do it, and never show the use
    `ssh-keygen -t ed25519 -f ~/grokbot-feed -N ""`
    Ask them to paste only the one line from `cat ~/grokbot-feed.pub` (it starts with `ssh-ed25519`). If the paste contains `PRIVATE KEY`, reject it and ask again for the `.pub` line. Then run `scripts/add-phone-key.sh --repo OWNER/NAME` with that line on stdin. The script adds a read-only deploy key.
 
-8. Ask: "Want one bot pinned at the top? Tell me its name, or say none." In `widget/grokbot.owl`, edit only the settings block: set `repo` to `git@github.com:OWNER/NAME.git`, set `pinnedName` to the exact bot name or leave it `""`, and leave `every 10m` unless they already asked for another interval. Give them that `.owl` file and say: "Here's your widget file. In Omalauncher, import it and add it to your home screen. Your bots should show up within a minute."
+8. Ask: "Want one bot pinned at the top? Tell me its name, or say none." From the kit directory run `scripts/phone-install-line.sh --repo OWNER/NAME --ref v0.1.0`, adding `--pin "EXACT NAME"` if they named one. If it refuses the name, ask for it again. Send the one line it prints, in a code block, with: "Last step on your phone: paste this one line into Omalauncher's terminal. It downloads the widget, checks it hasn't been tampered with, and adds it to your home screen on page 2." Then: "If Omalauncher asks for notification access, allow it. That's what shows unread dots."
 
 ## Uninstall
 
@@ -54,5 +54,5 @@ Ask which of these they want, then do only those. Do not delete the repo, the ke
 - Deploy key: `gh repo deploy-key list --repo OWNER/NAME`, then `gh repo deploy-key delete ID --repo OWNER/NAME` for the phone key.
 - Routine: delete the publish routine from step 6.
 - Feed repo: only if they ask, `gh repo delete OWNER/NAME`. Say that this removes the feed from GitHub.
-- Phone: they can delete `~/grokbot-feed` and `~/grokbot-feed.pub`, and remove the widget in Omalauncher.
+- Phone: they can delete `~/grokbot-feed`, `~/grokbot-feed.pub`, and `~/.config/omalauncher/widgets/grokbot.owl`.
 - This computer: if they ask, delete `/workspace/grokbot-widget-feed` and the kit clone.

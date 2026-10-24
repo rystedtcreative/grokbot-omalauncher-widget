@@ -16,7 +16,7 @@ widget "GrokBot" {
   requires { pacman: ["git", "openssh"] }
 
   // ════════════════════════════════════════════════════════════
-  // SETTINGS — edit this block, then re-import the widget.
+  // SETTINGS — edit this block in ~/.config/omalauncher/widgets/grokbot.owl.
   //   feed repo:  repo= below (SSH URL of your private feed)
   //   pinned bot: pinnedName (exact bot name, or "" to pin none)
   //   refresh:    the `every` duration on the feed source

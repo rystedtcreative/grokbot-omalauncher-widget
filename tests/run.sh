@@ -489,6 +489,44 @@ if ! grep -q '^auth status$' "$GH_LOG"; then
   exit 1
 fi
 
+# After adding, the key must read back as read-only. gh documents readOnly, but
+# real gh 2.103 returns read_only, so both shapes are accepted; false is refused.
+cat > "$TMP/bin/gh-keys" <<'EOF'
+#!/bin/sh
+printf '%s\n' "$*" >> "$GH_LOG"
+case "$1 $2 $3" in
+  "auth status"*) exit 0 ;;
+  "repo view"*) printf '%s\n' '{"visibility":"PRIVATE","isPrivate":true}'; exit 0 ;;
+  "repo deploy-key add")
+    case "$*" in *--help*) echo "  -w, --allow-write"; exit 0 ;; esac
+    exit 0 ;;
+  "repo deploy-key list")
+    k=$(cut -d' ' -f1,2 "$KEY_PUB")
+    printf '[{"id":7,"key":"%s","title":"omalauncher-phone",%s}]\n' "$k" "$KEY_RO"
+    exit 0 ;;
+esac
+exit 99
+EOF
+chmod +x "$TMP/bin/gh-keys"
+ln -sf gh-keys "$TMP/bin/gh"
+for ro in '"read_only":true' '"readOnly":true'; do
+  reset_log
+  expect_rc 0 env PATH="$TMP/bin:$PATH" KEY_PUB="$TMP/phone.pub" KEY_RO="$ro" \
+    "$ROOT/scripts/add-phone-key.sh" --repo example/grokbot-widget-feed "$TMP/phone.pub"
+  grep -q "read-only deploy key added" "$TMP/o"
+  if grep -q -- '--allow-write' "$GH_LOG"; then
+    echo "add-phone-key passed --allow-write" >&2
+    exit 1
+  fi
+done
+for ro in '"read_only":false' '"readOnly":false'; do
+  reset_log
+  expect_rc 1 env PATH="$TMP/bin:$PATH" KEY_PUB="$TMP/phone.pub" KEY_RO="$ro" \
+    "$ROOT/scripts/add-phone-key.sh" --repo example/grokbot-widget-feed "$TMP/phone.pub"
+  grep -q "is not read-only" "$TMP/e"
+done
+ln -sf gh-deny "$TMP/bin/gh"
+
 # A pushInsteadOf that mentions github.com is refused before gh or any network git command.
 REAL_GIT=$(command -v git)
 export REAL_GIT
@@ -759,6 +797,123 @@ if ! grep -q -F "push https://github.com/example/grokbot-widget-feed.git HEAD:re
 fi
 git --git-dir="$emptybare" rev-parse --verify refs/heads/main >/dev/null
 grep -q "Harbor" "$TMP/emptyco/index.json"
+
+# phone-install-line.sh refuses bad input, and its line installs only a verified widget.
+for bad in 'nope' 'a/b/c' 'a/b;rm' "a/b'" '-a/b' 'a-/b' 'a/b.git' 'a b/c' 'a/$(id)'; do
+  expect_rc 2 "$ROOT/scripts/phone-install-line.sh" --repo "$bad"
+  if [ -s "$TMP/o" ]; then
+    echo "phone-install-line.sh printed a line for repo $bad" >&2
+    exit 1
+  fi
+done
+for bad in 'a"b' "a'b" 'a\b' 'a|b' 'a$b' 'a`b' 'a&b' "$(printf 'a\tb')" "$(printf 'a\nb')" ' a' "$(printf '%065d' 0)"; do
+  expect_rc 2 "$ROOT/scripts/phone-install-line.sh" --repo octo/feed --pin "$bad"
+  if [ -s "$TMP/o" ]; then
+    echo "phone-install-line.sh printed a line for a bad pin" >&2
+    exit 1
+  fi
+done
+expect_rc 2 "$ROOT/scripts/phone-install-line.sh" --repo octo/feed --ref "v1;rm"
+expect_rc 2 "$ROOT/scripts/phone-install-line.sh" --repo octo/feed --base-url "http://x/';id"
+expect_rc 0 "$ROOT/scripts/phone-install-line.sh" --repo octo/feed
+if [ "$(wc -l < "$TMP/o")" -ne 1 ]; then
+  echo "install line is not one line" >&2
+  exit 1
+fi
+grep -q -F "curl -fsSL 'https://raw.githubusercontent.com/rystedtcreative/grokbot-omalauncher-widget/v0.1.0/widget/grokbot.owl'" "$TMP/o"
+grep -q -F "$(sha256sum widget/grokbot.owl | cut -d ' ' -f 1)" "$TMP/o"
+if grep -q 'pinnedName = "' "$TMP/o"; then
+  echo "install line set a pin nobody asked for" >&2
+  exit 1
+fi
+expect_rc 0 "$ROOT/scripts/phone-install-line.sh" --repo octo/feed --ref v9.9.9
+grep -q -F '/grokbot-omalauncher-widget/v9.9.9/widget/grokbot.owl' "$TMP/o"
+
+if command -v curl >/dev/null 2>&1; then
+  srv=$TMP/srv
+  mkdir -p "$srv/good/widget" "$srv/bad/widget"
+  cp widget/grokbot.owl "$srv/good/widget/grokbot.owl"
+  sed 's/StrictHostKeyChecking=yes/StrictHostKeyChecking=no/' widget/grokbot.owl > "$srv/bad/widget/grokbot.owl"
+  python3 - "$srv" "$TMP/port" >"$TMP/http.log" 2>&1 <<'PY' &
+import functools, http.server, sys
+root, portfile = sys.argv[1], sys.argv[2]
+handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=root)
+srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), handler)
+open(portfile, "w").write(str(srv.server_address[1]))
+srv.serve_forever()
+PY
+  HTTP_PID=$!
+  trap 'kill "$HTTP_PID" 2>/dev/null || true; rm -rf "$TMP"' EXIT
+  i=0
+  while [ ! -s "$TMP/port" ] && [ "$i" -lt 50 ]; do
+    sleep 0.1
+    i=$((i + 1))
+  done
+  base="http://127.0.0.1:$(cat "$TMP/port")"
+
+  expect_rc 0 "$ROOT/scripts/phone-install-line.sh" --repo octo-cat/my.feed --pin "Harbor Bot" --base-url "$base/good"
+  line=$(cat "$TMP/o")
+  for shell in sh bash; do
+    command -v "$shell" >/dev/null 2>&1 || continue
+    home=$TMP/phone-$shell
+    mkdir -p "$home"
+    HOME=$home "$shell" -c "$line" >"$TMP/install.out" 2>&1
+    grep -q "widget installed" "$TMP/install.out"
+    python3 - "$home/.config/omalauncher/widgets" <<'PY'
+import sys
+from pathlib import Path
+d = Path(sys.argv[1])
+names = sorted(p.name for p in d.iterdir())
+if names != ["grokbot.owl"]:
+    raise SystemExit(f"widgets dir has {names}")
+got = (d / "grokbot.owl").read_text()
+want = Path("widget/grokbot.owl").read_text()
+want = want.replace("YOUR_USER/grokbot-widget-feed", "octo-cat/my.feed")
+want = want.replace('let pinnedName = ""', 'let pinnedName = "Harbor Bot"')
+if got != want:
+    raise SystemExit("installed widget differs from the template plus repo and pin")
+if 'repo="git@github.com:octo-cat/my.feed.git"' not in got:
+    raise SystemExit("installed widget has the wrong repo")
+PY
+  done
+
+  # A tampered file is refused and leaves an existing widget alone.
+  expect_rc 0 "$ROOT/scripts/phone-install-line.sh" --repo octo-cat/my.feed --base-url "$base/bad"
+  bad_line=$(cat "$TMP/o")
+  home=$TMP/phone-tampered
+  mkdir -p "$home"
+  HOME=$home sh -c "$bad_line" >"$TMP/install.out" 2>&1
+  grep -q "tamper check" "$TMP/install.out"
+  if [ -e "$home/.config" ]; then
+    echo "tampered install wrote files" >&2
+    exit 1
+  fi
+  home=$TMP/phone-sh
+  cp "$home/.config/omalauncher/widgets/grokbot.owl" "$TMP/before.owl"
+  HOME=$home sh -c "$bad_line" >"$TMP/install.out" 2>&1
+  grep -q "tamper check" "$TMP/install.out"
+  cmp "$TMP/before.owl" "$home/.config/omalauncher/widgets/grokbot.owl"
+  if [ "$(ls -A "$home/.config/omalauncher/widgets")" != "grokbot.owl" ]; then
+    echo "tampered install left files behind" >&2
+    exit 1
+  fi
+
+  # A missing file (bad ref) installs nothing.
+  expect_rc 0 "$ROOT/scripts/phone-install-line.sh" --repo octo-cat/my.feed --base-url "$base/missing"
+  home=$TMP/phone-missing
+  mkdir -p "$home"
+  HOME=$home sh -c "$(cat "$TMP/o")" >"$TMP/install.out" 2>&1
+  grep -q "Install failed" "$TMP/install.out"
+  if [ -e "$home/.config" ]; then
+    echo "failed download wrote files" >&2
+    exit 1
+  fi
+  kill "$HTTP_PID" 2>/dev/null || true
+  echo "phone install line ok"
+else
+  echo "curl missing: skipped the phone install line run" >&2
+  exit 1
+fi
 
 # release-skill.sh fills placeholders from a tag and refuses a dirty tree or a skill without them.
 rel=$TMP/relkit

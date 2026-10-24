@@ -31,7 +31,7 @@ You'll need:
 - a free GitHub account
 - about 10 minutes
 
-Import the Omaha setup bot template and say hi. It asks one thing at a time, explains each step in plain words, and does the technical work for you. You'll do two things yourself: sign in to GitHub when it hands you the screen, and copy one line from your phone back to it.
+Import the Omaha setup bot template and say hi. It asks one thing at a time, explains each step in plain words, and does the technical work for you. You'll do three things yourself: sign in to GitHub when it hands you the screen, copy one line from your phone back to it, and paste the one line it gives you into Omalauncher's terminal. That line downloads the widget, checks it hasn't been tampered with, and puts it on page 2 of your home screen.
 
 It will never ask for a password, a GitHub token or a private key. If anything asks you for one, stop.
 
@@ -67,7 +67,13 @@ You need Python 3, `git`, and the GitHub CLI (`gh`) on the Grok Bot computer. Pi
    scripts/add-phone-key.sh --repo OWNER/NAME
    ```
 
-5. Edit the settings block at the top of `widget/grokbot.owl`: the feed SSH URL (`git@github.com:OWNER/NAME.git`), an optional pinned bot name, and the refresh interval (`every 10m`). Import the file in Omalauncher.
+5. Print the phone's install line, then paste it into Omalauncher's terminal. Add `--pin "Bot Name"` to pin one bot at the top.
+
+   ```sh
+   scripts/phone-install-line.sh --repo OWNER/NAME --ref v0.1.0
+   ```
+
+   The line downloads `widget/grokbot.owl` from that tag, checks its sha256 against this checkout, fills in your feed repo and pin, and writes it to `~/.config/omalauncher/widgets/grokbot.owl`. Omalauncher loads it on page 2. It installs nothing if the check fails. To change the refresh interval (`every 10m`), edit that file on the phone.
 
 Run `scripts/publish-feed.sh` again whenever bots change, or schedule it every few hours and stay quiet unless it fails. `scripts/update-checksums.sh` rewrites `checksums.txt` after you change the widget or the scripts. Run it before you tag a release.
 

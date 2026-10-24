@@ -6,6 +6,7 @@ tmp=$(mktemp)
 sha256sum \
   scripts/add-phone-key.sh \
   scripts/build-feed.py \
+  scripts/phone-install-line.sh \
   scripts/publish-feed.sh \
   scripts/update-checksums.sh \
   widget/grokbot.owl \

@@ -215,7 +215,9 @@ if not matched:
     print("error: could not confirm the new deploy key is read-only.", file=sys.stderr)
     sys.exit(1)
 for key in matched:
-    if key.get("readOnly") is not True:
+    # gh documents the field as readOnly, but gh 2.103 returns the REST name read_only.
+    ro = key["readOnly"] if "readOnly" in key else key.get("read_only")
+    if ro is not True:
         print(f"error: deploy key {key.get('id')} is not read-only. Remove it with gh repo deploy-key delete.", file=sys.stderr)
         sys.exit(1)
 PY
