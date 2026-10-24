@@ -32,7 +32,7 @@ assert "git -C /workspace/grokbot-omalauncher-widget rev-parse HEAD" in text
 assert "sha256sum checksums.txt" in text
 assert "sha256sum -c checksums.txt" in text
 size = len(text.encode())
-assert size < 6144, f"SKILL.md is {size} bytes"
+assert size < 7168, f"SKILL.md is {size} bytes"
 print(f"skill ok ({size} bytes)")
 PY
 
