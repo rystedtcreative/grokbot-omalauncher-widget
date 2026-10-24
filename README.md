@@ -1,8 +1,10 @@
-# Your Grok Bots, on your home screen
+# Grok Bot Omalauncher Widget for Android
 
-*Grok Bot Omalauncher Widget*
+*Your Grok Bots, on your Android home screen, in Omalauncher*
 
-A Grok Bot widget for [Omalauncher](https://github.com/SimonSchubert/omalauncher) on Android. Pin your favorite bots, scroll the rest, and tap any bot to open its chat. Unread dots show you which bots have something new, so you don't have to open the app to check.
+A Grok Bot setup for a home-screen widget in [Omalauncher](https://github.com/SimonSchubert/omalauncher) on Android. You need an Android phone with Omalauncher installed.
+
+Pin your favorite bots, scroll the rest, and tap any bot to open its chat. Unread dots show you which bots have something new, so you don't have to open the app to check.
 
 Setup takes one conversation. Import Omaha, the setup bot, answer a few questions, and it builds everything on your Grok Bot computer. Your bot list goes only to a private GitHub repo you own, and your phone gets read-only access to it. Nothing passes through us.
 
