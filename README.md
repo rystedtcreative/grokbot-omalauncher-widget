@@ -77,7 +77,7 @@ Run `scripts/publish-feed.sh` again whenever bots change, or schedule it every f
 Your bot list only goes to places you control:
 
 - **Your Grok Bot computer**, which already holds your bots. It builds the list.
-- **Your private GitHub repo.** The setup refuses to use a public one.
+- **Your private GitHub repo.** The setup refuses to use a public one, and every refresh checks again, so keep it private. If it's ever made public, refreshes stop until you make it private again.
 - **Your phone**, which can read that repo but can't change it.
 
 The list holds names, titles, avatars and colors. It never includes your bots' instructions, memory, skills or secrets. Descriptions stay off unless you turn them on. There's no server, account or relay run by the kit's author. For the full details and how to report a problem, see [SECURITY.md](SECURITY.md).

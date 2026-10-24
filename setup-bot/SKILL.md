@@ -32,9 +32,10 @@ Explain each step in one plain sentence before you do it, and never show the use
 3. Ask: "What should I call your private repo? I'd suggest grokbot-widget-feed. Just say 'sounds good' to use it." The default name is `grokbot-widget-feed`, so the argument is `OWNER/grokbot-widget-feed` under their GitHub user. It must stay private. Confirm the full `OWNER/NAME` once.
 
 4. Say once for steps 4 to 6: "I'm installing the widget files, checking they haven't been tampered with, and building your bot list. I'll also refresh it every 3 hours and only message you if something breaks." Install the pinned release, never a branch: `git clone --depth 1 --branch v0.1.0 https://github.com/rystedtcreative/grokbot-omalauncher-widget /workspace/grokbot-omalauncher-widget` (if it already exists, `git -C` it to fetch and check out that tag).
-   Before running any script:
-   `cd /workspace/grokbot-omalauncher-widget && sha256sum -c checksums.txt`
-   Every line must say OK. If any line fails, stop. The tree does not match the release. Do not run the scripts.
+   Stop and run nothing unless these match. If either value below still reads `__EXPECTED_...__` (an unreleased copy), stop and tell them this copy of the setup bot isn't a finished release; never skip the check.
+   EXPECTED_COMMIT=__EXPECTED_COMMIT__
+   EXPECTED_CHECKSUMS_SHA256=__EXPECTED_CHECKSUMS_SHA256__
+   `git -C /workspace/grokbot-omalauncher-widget rev-parse HEAD` equals EXPECTED_COMMIT. There, `sha256sum checksums.txt` equals EXPECTED_CHECKSUMS_SHA256 (first field). Then `sha256sum -c checksums.txt`; every line must say OK.
 
 5. From that directory run `scripts/publish-feed.sh --repo OWNER/NAME`. Do not pass `--include-descriptions` unless they explicitly ask. If they ask, warn that descriptions can hold private instructions: scrubbing removes values that look like secrets and can still miss some. If the script says the repo is not private, stop. Do not make it public. Do not print tokens.
 

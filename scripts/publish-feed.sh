@@ -34,6 +34,26 @@ valid_repo() {
   return 0
 }
 
+# url.*.insteadOf and pushInsteadOf are applied to an explicit push URL.
+# Anything that mentions github.com can send the feed somewhere else.
+refuse_github_rewrite() {
+  if [ -n "${1:-}" ]; then
+    rewrite_rc=0
+    rewrites=$(git -C "$1" config --get-regexp '^url\..*\.(pushinsteadof|insteadof)$' 2>/dev/null) || rewrite_rc=$?
+  else
+    rewrite_rc=0
+    rewrites=$(git config --get-regexp '^url\..*\.(pushinsteadof|insteadof)$' 2>/dev/null) || rewrite_rc=$?
+  fi
+  if [ "$rewrite_rc" -ne 0 ] && [ "$rewrite_rc" -ne 1 ]; then
+    echo "error: could not read git url rewrite config. Not pushing." >&2
+    exit 1
+  fi
+  if printf '%s\n' "$rewrites" | grep -i -q github.com; then
+    echo "error: git url insteadOf or pushInsteadOf would rewrite a github.com URL. Not pushing." >&2
+    exit 1
+  fi
+}
+
 while [ $# -gt 0 ]; do
   case "$1" in
     --repo)
@@ -73,6 +93,9 @@ if ! command -v gh >/dev/null 2>&1; then
   echo "error: GitHub CLI (gh) is not installed on this computer." >&2
   exit 1
 fi
+
+# Before gh auth, clone, fetch, or push. A later check repeats this inside the checkout.
+refuse_github_rewrite
 
 # Do not print gh auth output. It can include account details, and a token
 # must never land in the transcript.
@@ -205,13 +228,29 @@ if git -C "$FEED_DIR" diff --cached --quiet; then
   exit 0
 fi
 
-# Re-check immediately before anything leaves this computer.
-if ! repo_meta; then
+# Never push via origin. gh's credential helper on this checkout auths the https URL.
+# Commit only after these gates, so a refusal leaves the feed dirty and the next run retries.
+push_url="https://github.com/${REPO}.git"
+origin_push=$(git -C "$FEED_DIR" remote get-url --push origin 2>/dev/null || true)
+if [ "$origin_push" != "$push_url" ]; then
+  echo "error: origin push URL is not $push_url. Not pushing." >&2
+  exit 1
+fi
+refuse_github_rewrite "$FEED_DIR"
+
+# Visibility of exactly $REPO. No other GitHub call follows this one.
+if ! gh repo view "$REPO" --json visibility,isPrivate >"$tmp_out" 2>"$tmp_err"; then
   echo "error: could not re-check that $REPO is private. Not pushing." >&2
   exit 1
 fi
 require_private
+refuse_github_rewrite "$FEED_DIR"
+origin_push=$(git -C "$FEED_DIR" remote get-url --push origin 2>/dev/null || true)
+if [ "$origin_push" != "$push_url" ]; then
+  echo "error: origin push URL is not $push_url. Not pushing." >&2
+  exit 1
+fi
 
 git -C "$FEED_DIR" commit -m "Update Grok Bot widget feed"
-git -C "$FEED_DIR" push -u origin HEAD
+git -C "$FEED_DIR" push "$push_url" HEAD:refs/heads/main
 echo "feed pushed"

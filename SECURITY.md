@@ -21,7 +21,7 @@ The widget clones only the feed repository, shallow and sparse (`index.json` and
 - Descriptions, unless you pass `--include-descriptions`. Opt-in text is scrubbed (token-shaped values become `REDACTED`). Scrubbing is not a promise that every secret is gone. Leave descriptions off.
 - Profile fields the feed does not need. `serverId`, `harness`, `voiceId`, `secrets`, `skills`, and `memory` are never written. Unknown profile keys are warned about and dropped, not copied.
 
-`checksums.txt` is the sha256 of the widget and the scripts. Install from a pinned git tag, then run `sha256sum -c checksums.txt` before you run those scripts. A mismatch means the tree is not the release you pinned.
+`checksums.txt` is the sha256 of the widget and the scripts. Install from a pinned git tag, then run `sha256sum -c checksums.txt` before you run those scripts. A mismatch means the tree is not the release you pinned. The setup bot also requires `rev-parse HEAD` and the sha256 of `checksums.txt` to match the release skill, and runs nothing if they do not.
 
 GitHub CLI output is not printed. Do not paste a personal access token into the chat or into these scripts. Log in with `gh auth login` on the computer.
 
@@ -31,7 +31,7 @@ Someone who can read the private repo, or who has the phone, can see the feed: b
 
 A stolen computer can push a new feed, because that is the machine that builds it. Treat the computer like the bots it already stores.
 
-The widget accepts GitHub's host key on first connect (`StrictHostKeyChecking=accept-new`), same as a first SSH connection to GitHub. After that, the host key is pinned in the phone's known_hosts.
+The widget ships GitHub's published host keys and checks them (`StrictHostKeyChecking=yes` against the `known_hosts` file it writes). It does not accept a new host key on first connect.
 
 Notification matching uses the bot id and name against notification titles from the Grok Bot app. The widget does not send those notifications anywhere.
 

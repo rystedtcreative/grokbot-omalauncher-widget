@@ -43,8 +43,14 @@ SHELL_NAMES = {"", "new bot"}
 INDEX_CAP = 1_000_000
 
 # Secret scrub: replace live-looking values with REDACTED, keep env-var names.
+# Not complete. A secret in an unexpected shape can still get through.
 SCRUB_PATTERNS = [
     (re.compile(r"\bsk-(?:[A-Za-z0-9_-]*-)?[A-Za-z0-9_-]{16,}"), "REDACTED"),
+    (re.compile(r"\b(?:sk_live_|sk_test_|rk_live_)[A-Za-z0-9]{10,}"), "REDACTED"),
+    (re.compile(r"\bxai-[A-Za-z0-9_-]{10,}"), "REDACTED"),
+    (re.compile(r"\beyJ[A-Za-z0-9_-]{8,}\.eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}"), "REDACTED"),
+    (re.compile(r"(?i)([a-z][a-z0-9+.-]*://)[^\s/:@]+:[^\s/@]+@"), r"\1REDACTED@"),
+    (re.compile(r"(?:https://)?hooks\.slack\.com/services/[A-Za-z0-9_/-]+"), "REDACTED"),
     (re.compile(r"\bgh[pousr]_[A-Za-z0-9]{20,}"), "REDACTED"),
     (re.compile(r"\bgithub_pat_[A-Za-z0-9_]{20,}"), "REDACTED"),
     (re.compile(r"\bxox[abposr]-[A-Za-z0-9-]{10,}"), "REDACTED"),
@@ -56,9 +62,17 @@ SCRUB_PATTERNS = [
     # NAME_WITH_KEY/SECRET/TOKEN/PASSWORD = <long value>  -> keep the name
     (re.compile(r"(?i)\b([A-Z0-9_]*(?:KEY|SECRET|TOKEN|PASSWORD|PASSWD|PWD)[A-Z0-9_]*\s*[=:]\s*)"
                 r"([\"']?)[A-Za-z0-9._~+/=-]{16,}\2"), r"\1\2REDACTED\2"),
+    (re.compile(r"(?i)\b(password)(\s*:\s*)\S+"), r"\1\2REDACTED"),
+    (re.compile(r"(?i)\b(password)(\s+is\s+)\S+"), r"\1\2REDACTED"),
+    (re.compile(r"(?i)\b(pw)(\s*=\s*)\S+"), r"\1\2REDACTED"),
 ]
 LEAK = re.compile(
     r"sk-(?:[A-Za-z0-9_-]*-)?[A-Za-z0-9_-]{16,}"
+    r"|(?:sk_live_|sk_test_|rk_live_)[A-Za-z0-9]{10,}"
+    r"|xai-[A-Za-z0-9_-]{10,}"
+    r"|eyJ[A-Za-z0-9_-]{8,}\.eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}"
+    r"|[a-z][a-z0-9+.-]*://[^\s/:@]+:[^\s/@]+@"
+    r"|(?:https://)?hooks\.slack\.com/services/[A-Za-z0-9_/-]+"
     r"|gh[pousr]_[A-Za-z0-9]{20,}"
     r"|github_pat_[A-Za-z0-9_]{20,}"
     r"|xox[abposr]-[A-Za-z0-9-]{10,}"

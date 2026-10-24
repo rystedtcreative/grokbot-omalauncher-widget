@@ -27,7 +27,14 @@ widget "GrokBot" {
   // refresh interval
   source feed = cmd("""
     set -eu
-    export GIT_SSH_COMMAND="ssh -i $HOME/grokbot-feed -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=accept-new"
+    kh="$HOME/.cache/omalauncher/grokbot-widget/known_hosts"
+    mkdir -p "$(dirname "$kh")"
+    cat > "$kh" <<'EOF'
+    github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl
+    github.com ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBEmKSENjQEezOmxkZMy7opKgwFB9nkt5YRrYMjNuG5N87uRgg6CLrbo5wAdT/y6v0mKV0U2w0WZ2YB/++Tpockg=
+    github.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCj7ndNxQowgcQnjshcLrqPEiiphnt+VTTvDP6mHBL9j1aNUkY4Ue1gvwnGLVlOhGeYrnZaMgRK6+PKCUXaDbC7qtbW8gIkhL7aGCsOr/C56SJMy/BCZfxd1nWzAOxSDPgVsmerOBYfNqltV9/hWCqBywINIR+5dIg6JTJ72pcEpEjcYgXkE2YEFXV1JHnsKgbLWNlhScqb2UmyRkQyytRLtL+38TGxkxCflmO+5Z8CSSNY7GidjMIZ7Q4zMjA2n1nGrlTDkzwDCsw+wqFPGQA179cnfGWOWRVruj16z6XyvxvjJwbz0wQZ75XK5tKSb7FNyeIEs4TT4jk+S4dhPeAUC5y+bDYirYgM4GC7uEnztnZyaVWQ7B381AK4Qdrwt51ZqExKbQpTUNn+EjqoTwvqNj4kqx5QUCI0ThS/YkOxJCXmPUWZbhjpCg56i+2aB6CmK2JGhn57K5mj0MNdBXA4/WnwH6XoPWJzK5Nyu2zB3nAZp+S5hpQs+p1vN1/wsjk=
+    EOF
+    export GIT_SSH_COMMAND="ssh -i $HOME/grokbot-feed -o IdentitiesOnly=yes -o BatchMode=yes -o UserKnownHostsFile=$kh -o StrictHostKeyChecking=yes"
     export GIT_TERMINAL_PROMPT=0
     repo="git@github.com:YOUR_USER/grokbot-widget-feed.git"
     cache="$HOME/.cache/omalauncher/grokbot-widget/feed"
@@ -71,9 +78,13 @@ widget "GrokBot" {
 
   // The shade title is the conversation. The text is the message, so a mention
   // of another bot there is not a second sender.
-  let ranked = (ready ? (feed.out.bots ?? []) : []).map(b => {
+  // Escape a name before it goes into the word-boundary pattern, so "C++" and "Bot (beta)" stay literal.
+  let reEsc = s => reduce(["\\", ".", "+", "*", "?", "^", "$", "|", "(", ")", "[", "]", "{", "}"], (acc, ch) => replace(acc, ch, "\\" + ch), s)
+  // Hide a bot whose id is not letters, digits, and hyphens. The feed link field is never read.
+  let shownBots = (ready ? (feed.out.bots ?? []) : []).filter(b => match(b.id ?? "", "^[A-Za-z0-9-]{1,64}$") != null)
+  let ranked = shownBots.map(b => {
     bot: b,
-    hits: grok.filter(i => ((b.id ?? "") != "" && contains(lower(" ${i.title} "), lower(b.id))) || ((b.name ?? "") != "" && match(lower(" ${i.title} "), "[^a-z0-9]${lower(b.name)}[^a-z0-9]") != null))
+    hits: grok.filter(i => ((b.id ?? "") != "" && contains(lower(" ${i.title} "), lower(b.id))) || ((b.name ?? "") != "" && match(lower(" ${i.title} "), "[^a-z0-9]" + reEsc(lower(b.name)) + "[^a-z0-9]") != null))
   })
   let wantPin = (pinnedName ?? "") != ""
   let pinned = wantPin ? ranked.filter(e => lower(e.bot.name) == lower(pinnedName)) : []
@@ -208,7 +219,7 @@ widget "GrokBot" {
     let idx = clamp(floor(hash(b.id) * 8), 0, 7)
     let fallback = idx == 0 ? #ef4444 : idx == 1 ? #f97316 : idx == 2 ? #eab308 : idx == 3 ? #22c55e : idx == 4 ? #22d3ee : idx == 5 ? #3b82f6 : idx == 6 ? #ec4899 : #8b5cf6
     let tint = named ?? fallback
-    let link = (b.link ?? "") != "" ? b.link : "grokbot://app/v1/agent?id=${b.id}"
+    let link = "grokbot://app/v1/agent?id=${b.id}"
     Row {
       gap: 8
       align: center

@@ -26,6 +26,11 @@ for line in text[4:end].splitlines():
     fields[key] = value
 assert fields["name"] == "omalauncher-widget-setup"
 assert fields["description"].startswith("use this when"), fields["description"]
+assert "__EXPECTED_COMMIT__" in text
+assert "__EXPECTED_CHECKSUMS_SHA256__" in text
+assert "git -C /workspace/grokbot-omalauncher-widget rev-parse HEAD" in text
+assert "sha256sum checksums.txt" in text
+assert "sha256sum -c checksums.txt" in text
 size = len(text.encode())
 assert size < 6144, f"SKILL.md is {size} bytes"
 print(f"skill ok ({size} bytes)")
@@ -38,13 +43,59 @@ for needle in \
   'BatchMode=yes' \
   'GIT_TERMINAL_PROMPT=0' \
   'schemaVersion' \
-  'unknown feed schema'
+  'unknown feed schema' \
+  'StrictHostKeyChecking=yes' \
+  'UserKnownHostsFile=$kh' \
+  '.cache/omalauncher/grokbot-widget/known_hosts' \
+  'grokbot://app/v1/agent?id=${b.id}' \
+  '^[A-Za-z0-9-]{1,64}$' \
+  'reEsc'
 do
   if ! grep -q -F "$needle" widget/grokbot.owl; then
     echo "widget is missing: $needle" >&2
     exit 1
   fi
 done
+
+if grep -n -F '.link' widget/grokbot.owl; then
+  echo "widget reads .link" >&2
+  exit 1
+fi
+if grep -q 'accept-new' widget/grokbot.owl; then
+  echo "widget still accepts a new host key" >&2
+  exit 1
+fi
+if grep -F '${lower(b.name)}' widget/grokbot.owl; then
+  echo "bot name is interpolated into a regex unescaped" >&2
+  exit 1
+fi
+
+python3 - <<'PY'
+import subprocess
+from pathlib import Path
+owl = Path("widget/grokbot.owl").read_text()
+lines = [ln for ln in Path("widget/known_hosts").read_text().splitlines() if ln.strip()]
+kinds = ("ssh-ed25519", "ecdsa-sha2-nistp256", "ssh-rsa")
+if len(lines) != 3 or any(not ln.startswith("github.com " + k + " ") for ln, k in zip(lines, kinds)):
+    raise SystemExit(f"known_hosts should be github.com ed25519, ecdsa, rsa; got {len(lines)} lines")
+for ln in lines:
+    if ln not in owl:
+        raise SystemExit("widget command is missing a known_hosts line")
+fp = subprocess.check_output(["ssh-keygen", "-lf", "widget/known_hosts"], text=True)
+expect = {
+    "ED25519": "SHA256:+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU",
+    "ECDSA": "SHA256:p2QAMXNIC1TJYWeIOttrVc98/R1BUFWu3/LiyKgUfQM",
+    "RSA": "SHA256:uNiVztksCsDhcc0u9e8BujQXVUpKZIDTMczCvj3tD2s",
+}
+found = {}
+for line in fp.splitlines():
+    parts = line.split()
+    # 256 SHA256:... github.com (ED25519)
+    found[parts[-1].strip("()")] = parts[1]
+if found != expect:
+    raise SystemExit(f"host key fingerprints {found}")
+print("widget link, name escape, and host keys ok")
+PY
 
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
@@ -244,6 +295,27 @@ for case in cases:
     cleaned = mod.scrub(case)
     if cleaned == case or "REDACTED" not in cleaned or mod.LEAK.search(cleaned):
         raise SystemExit("scrub failed on a fixture case")
+
+def joined(*parts):
+    return "".join(parts)
+
+# Built here, not stored as secret-shaped literals.
+runtime_cases = [
+    joined("sk_live_", "a" * 24),
+    joined("sk_test_", "b" * 24),
+    joined("rk_live_", "c" * 24),
+    joined("xai-", "d" * 20),
+    joined("eyJ", "e" * 12, ".eyJ", "f" * 12, ".", "g" * 12),
+    joined("https://", "user", ":", "pass", "@example.com/feed"),
+    joined("https://hooks.slack.com/services/", "T" * 9, "/", "B" * 9, "/", "h" * 16),
+    "password: " + joined("hunter2"),
+    "password is " + joined("hunter2"),
+    "pw=" + joined("hunter2"),
+]
+for case in runtime_cases:
+    cleaned = mod.scrub("note " + case + " end")
+    if case in cleaned or "REDACTED" not in cleaned or mod.LEAK.search(cleaned):
+        raise SystemExit("scrub failed on a runtime case: " + cleaned)
 print("descriptions and scrub ok")
 PY
 
@@ -351,12 +423,19 @@ expect_rc 1 env PATH="$TMP/emptybin" "$ROOT/scripts/publish-feed.sh" --repo exam
 grep -q "not installed" "$TMP/e"
 
 # Private key is rejected before gh, from a file and from stdin.
+# The key is generated here and deleted with the temp dir. No key file is committed.
+if ! command -v ssh-keygen >/dev/null 2>&1; then
+  echo "ssh-keygen is required for the key tests" >&2
+  exit 1
+fi
+ssh-keygen -t ed25519 -f "$TMP/throwaway" -N "" -C "widget-test-private" >/dev/null
+priv_line=$(awk 'NR==2 { print; exit }' "$TMP/throwaway")
 reset_log
 ln -sf gh-deny "$TMP/bin/gh"
 expect_rc 1 env PATH="$TMP/bin:$PATH" "$ROOT/scripts/add-phone-key.sh" \
-  --repo example/grokbot-widget-feed "$ROOT/tests/fixtures/fake-private.key"
+  --repo example/grokbot-widget-feed "$TMP/throwaway"
 grep -q "private key" "$TMP/e"
-if grep -q "AAAAFAKE" "$TMP/e"; then
+if grep -q -F "$priv_line" "$TMP/e"; then
   echo "private key material was printed" >&2
   exit 1
 fi
@@ -367,8 +446,12 @@ if [ -s "$GH_LOG" ]; then
 fi
 reset_log
 expect_rc 1 env PATH="$TMP/bin:$PATH" "$ROOT/scripts/add-phone-key.sh" \
-  --repo example/grokbot-widget-feed < "$ROOT/tests/fixtures/fake-private.key"
+  --repo example/grokbot-widget-feed < "$TMP/throwaway"
 grep -q "private key" "$TMP/e"
+if grep -q -F "$priv_line" "$TMP/e"; then
+  echo "stdin private key material was printed" >&2
+  exit 1
+fi
 if [ -s "$GH_LOG" ]; then
   echo "stdin private key called gh" >&2
   exit 1
@@ -406,6 +489,84 @@ if ! grep -q '^auth status$' "$GH_LOG"; then
   exit 1
 fi
 
+# A pushInsteadOf that mentions github.com is refused before gh or any network git command.
+REAL_GIT=$(command -v git)
+export REAL_GIT
+GIT_WRAP_LOG=$TMP/gitwrap.log
+export GIT_WRAP_LOG
+cat > "$TMP/bin/git-nonet" <<'EOF'
+#!/bin/sh
+printf '%s\n' "$*" >> "${GIT_WRAP_LOG:-/dev/null}"
+prev=
+sub=
+for a in "$@"; do
+  if [ "$prev" = "-C" ] || [ "$prev" = "-c" ]; then
+    prev=$a
+    continue
+  fi
+  case "$a" in
+    -*) prev=$a; continue ;;
+  esac
+  sub=$a
+  break
+done
+case "$sub" in
+  fetch|push|ls-remote|clone|pull)
+    printf '%s\n' "network git: $*" >> "${GIT_WRAP_LOG:-/dev/null}"
+    exit 97
+    ;;
+esac
+exec "$REAL_GIT" "$@"
+EOF
+chmod +x "$TMP/bin/git-nonet"
+ln -sf git-nonet "$TMP/bin/git"
+printf '%s\n' '[url "https://evil.example/git"]' '	pushInsteadOf = https://github.com/' > "$TMP/gitconfig"
+reset_log
+: > "$GIT_WRAP_LOG"
+ln -sf gh-deny "$TMP/bin/gh"
+expect_rc 1 env PATH="$TMP/bin:$PATH" GIT_CONFIG_GLOBAL="$TMP/gitconfig" \
+  GROKBOT_FEED_DIR="$TMP/not-a-feed" \
+  "$ROOT/scripts/publish-feed.sh" --repo example/grokbot-widget-feed
+grep -q "pushInsteadOf" "$TMP/e"
+grep -q "Not pushing" "$TMP/e"
+if [ -s "$GH_LOG" ]; then
+  echo "pushInsteadOf refusal called gh" >&2
+  cat "$GH_LOG" >&2
+  exit 1
+fi
+if grep -q "network git:" "$GIT_WRAP_LOG"; then
+  echo "pushInsteadOf refusal reached a network git command" >&2
+  cat "$GIT_WRAP_LOG" >&2
+  exit 1
+fi
+
+# A rewrite that never mentions github.com is not refused here.
+printf '%s\n' '[url "https://example.com/mirror"]' '	insteadOf = https://gitlab.com/' > "$TMP/gitconfig-ok"
+reset_log
+: > "$GIT_WRAP_LOG"
+ln -sf gh-noauth "$TMP/bin/gh"
+expect_rc 4 env PATH="$TMP/bin:$PATH" GIT_CONFIG_GLOBAL="$TMP/gitconfig-ok" \
+  GROKBOT_FEED_DIR="$TMP/not-a-feed" \
+  "$ROOT/scripts/publish-feed.sh" --repo example/grokbot-widget-feed
+grep -q "not logged in" "$TMP/e"
+if grep -q "would rewrite" "$TMP/e"; then
+  echo "a non-github insteadOf was refused" >&2
+  exit 1
+fi
+if grep -q "network git:" "$GIT_WRAP_LOG"; then
+  echo "non-github insteadOf reached a network git command" >&2
+  cat "$GIT_WRAP_LOG" >&2
+  exit 1
+fi
+rm -f "$TMP/bin/git"
+
+if grep -E -n '[[:space:]]push[[:space:]]+(-u[[:space:]]+)?("?\$\{?origin\}?|origin)([[:space:]]|$)' scripts/publish-feed.sh; then
+  echo "publish-feed.sh pushes via origin" >&2
+  exit 1
+fi
+grep -q 'HEAD:refs/heads/main' scripts/publish-feed.sh
+grep -q 'https://github.com/${REPO}.git' scripts/publish-feed.sh
+
 # Happy path against a local bare repo. No GitHub calls, no network.
 # The phone-side shallow fetch cannot fast-forward; publish must still push.
 bare=$TMP/bare
@@ -439,8 +600,6 @@ if [ "$1" = "repo" ] && [ "$2" = "clone" ]; then
   dest=$4
   git clone -q --depth 1 "$LOCAL_BARE" "$dest"
   git -C "$dest" remote set-url origin "https://github.com/example/grokbot-widget-feed.git"
-  # Match the full URL. A prefix rewrite would append ".git" onto the bare path.
-  git -C "$dest" config "url.${LOCAL_BARE}.insteadOf" "https://github.com/example/grokbot-widget-feed.git"
   exit 0
 fi
 printf '%s\n' "unexpected gh: $*" >> "$GH_LOG"
@@ -448,12 +607,92 @@ exit 99
 EOF
 chmod +x "$TMP/bin/gh-local"
 ln -sf gh-local "$TMP/bin/gh"
+# Redirect only the test's GitHub URL. Production has no such wrapper.
+cat > "$TMP/bin/git-rewrite" <<'EOF'
+#!/usr/bin/env python3
+import os, sys
+real = os.environ["REAL_GIT"]
+bare = os.environ["LOCAL_BARE"]
+log = os.environ.get("GIT_WRAP_LOG", "")
+githubs = {
+    "https://github.com/example/grokbot-widget-feed.git",
+    "git@github.com:example/grokbot-widget-feed.git",
+}
+if log:
+    with open(log, "a") as fh:
+        fh.write(" ".join(sys.argv[1:]) + "\n")
+args = sys.argv[1:]
+
+def subcommand(argv):
+    i = 0
+    while i < len(argv):
+        a = argv[i]
+        if a in ("-C", "-c"):
+            i += 2
+            continue
+        if a.startswith("-"):
+            i += 1
+            continue
+        return a, i
+    return "", 0
+
+def exec_git(argv):
+    os.execv(real, [real, *argv])
+
+sub, idx = subcommand(args)
+if sub == "ls-remote":
+    exec_git([bare if a == "origin" else a for a in args])
+if sub == "fetch" and "origin" in args:
+    prefix = args[:idx]
+    rest = args[idx + 1:]
+    depth = []
+    branch = None
+    i = 0
+    while i < len(rest):
+        a = rest[i]
+        if a == "--depth" and i + 1 < len(rest):
+            depth = ["--depth", rest[i + 1]]
+            i += 2
+            continue
+        if a == "origin":
+            i += 1
+            continue
+        if a.startswith("-"):
+            i += 1
+            continue
+        branch = a
+        i += 1
+    if branch is None:
+        refspec = "+refs/heads/*:refs/remotes/origin/*"
+    else:
+        refspec = "+refs/heads/%s:refs/remotes/origin/%s" % (branch, branch)
+    exec_git([*prefix, "fetch", *depth, bare, refspec])
+if sub == "push":
+    if "origin" in args:
+        sys.stderr.write("test wrapper: push via origin\n")
+        sys.exit(99)
+    exec_git([bare if a in githubs else a for a in args])
+exec_git(args)
+EOF
+chmod +x "$TMP/bin/git-rewrite"
+ln -sf git-rewrite "$TMP/bin/git"
+: > "$GIT_WRAP_LOG"
 reset_log
 expect_rc 0 env PATH="$TMP/bin:$PATH" GROKBOT_FEED_DIR="$TMP/checkout" \
   "$ROOT/scripts/publish-feed.sh" \
   --repo example/grokbot-widget-feed \
   --agents-dir "$ROOT/tests/fixtures/agents"
 grep -q "feed pushed" "$TMP/o"
+if ! grep -q -F "push https://github.com/example/grokbot-widget-feed.git HEAD:refs/heads/main" "$GIT_WRAP_LOG"; then
+  echo "publish did not push the explicit main ref" >&2
+  cat "$GIT_WRAP_LOG" >&2
+  exit 1
+fi
+if grep -E '(^| )push( | .* )origin( |$)' "$GIT_WRAP_LOG"; then
+  echo "publish pushed via origin" >&2
+  cat "$GIT_WRAP_LOG" >&2
+  exit 1
+fi
 grep -q "Harbor" "$TMP/checkout/index.json"
 if grep -q '"description"' "$TMP/checkout/index.json"; then
   echo "published feed included descriptions" >&2
@@ -461,11 +700,17 @@ if grep -q '"description"' "$TMP/checkout/index.json"; then
 fi
 before=$(git --git-dir="$bare" rev-list --count main)
 reset_log
+: > "$GIT_WRAP_LOG"
 expect_rc 0 env PATH="$TMP/bin:$PATH" GROKBOT_FEED_DIR="$TMP/checkout" \
   "$ROOT/scripts/publish-feed.sh" \
   --repo example/grokbot-widget-feed \
   --agents-dir "$ROOT/tests/fixtures/agents"
 grep -q "feed unchanged" "$TMP/o"
+if grep -q -F "HEAD:refs/heads/main" "$GIT_WRAP_LOG"; then
+  echo "unchanged feed still tried to push" >&2
+  cat "$GIT_WRAP_LOG" >&2
+  exit 1
+fi
 after=$(git --git-dir="$bare" rev-list --count main)
 if [ "$before" != "$after" ]; then
   echo "unchanged feed was pushed again ($before -> $after)" >&2
@@ -480,6 +725,74 @@ if grep -E -q 'repo create|deploy-key|--public|allow-write' "$GH_LOG"; then
   cat "$GH_LOG" >&2
   exit 1
 fi
+
+# First push into an empty repo still names main explicitly.
+emptybare=$TMP/emptybare
+git init -q -b main --bare "$emptybare"
+: > "$GIT_WRAP_LOG"
+reset_log
+expect_rc 0 env PATH="$TMP/bin:$PATH" LOCAL_BARE="$emptybare" GROKBOT_FEED_DIR="$TMP/emptyco" \
+  "$ROOT/scripts/publish-feed.sh" \
+  --repo example/grokbot-widget-feed \
+  --agents-dir "$ROOT/tests/fixtures/agents"
+grep -q "feed pushed" "$TMP/o"
+if ! grep -q -F "push https://github.com/example/grokbot-widget-feed.git HEAD:refs/heads/main" "$GIT_WRAP_LOG"; then
+  echo "empty repo was not pushed to main" >&2
+  cat "$GIT_WRAP_LOG" >&2
+  exit 1
+fi
+git --git-dir="$emptybare" rev-parse --verify refs/heads/main >/dev/null
+grep -q "Harbor" "$TMP/emptyco/index.json"
+
+# release-skill.sh fills placeholders from a tag and refuses a dirty tree or a skill without them.
+rel=$TMP/relkit
+mkdir -p "$rel"
+tar -C "$ROOT" -cf - --exclude .git --exclude dist --exclude __pycache__ --exclude '*.pyc' . | tar -C "$rel" -xf -
+git -C "$rel" init -q -b main
+git -C "$rel" config user.email widget-test@localhost
+git -C "$rel" config user.name "widget test"
+git -C "$rel" add -A
+git -C "$rel" commit -q -m base
+git -C "$rel" tag v0.1.0-test
+( cd "$rel" && scripts/release-skill.sh v0.1.0-test ) >"$TMP/rel.out"
+python3 - "$rel" <<'PY'
+import hashlib, subprocess, sys
+from pathlib import Path
+root = Path(sys.argv[1])
+text = (root / "dist/SKILL.md").read_text()
+if "__EXPECTED_COMMIT__" in text or "__EXPECTED_CHECKSUMS_SHA256__" in text:
+    raise SystemExit("filled skill still has placeholders")
+commit = subprocess.check_output(["git", "-C", str(root), "rev-parse", "v0.1.0-test^{commit}"], text=True).strip()
+digest = hashlib.sha256((root / "checksums.txt").read_bytes()).hexdigest()
+if commit not in text or digest not in text:
+    raise SystemExit("filled skill is missing the tag commit or checksums digest")
+if not text.startswith("---\n"):
+    raise SystemExit("filled skill lost its frontmatter")
+print("release skill ok")
+PY
+printf '\n' >> "$rel/README.md"
+if ( cd "$rel" && scripts/release-skill.sh v0.1.0-test ) >"$TMP/rel.out" 2>"$TMP/rel.err"; then
+  echo "release-skill.sh ran on a dirty tree" >&2
+  exit 1
+fi
+grep -q "dirty tree" "$TMP/rel.err"
+git -C "$rel" checkout -q -- .
+python3 - "$rel/setup-bot/SKILL.md" <<'PY'
+import pathlib, sys
+path = pathlib.Path(sys.argv[1])
+text = path.read_text().replace("__EXPECTED_COMMIT__", "COMMIT").replace("__EXPECTED_CHECKSUMS_SHA256__", "SUM")
+if "__EXPECTED_COMMIT__" in text or "__EXPECTED_CHECKSUMS_SHA256__" in text:
+    raise SystemExit("failed to strip placeholders in the fixture")
+path.write_text(text)
+PY
+git -C "$rel" add setup-bot/SKILL.md
+git -C "$rel" commit -q -m "drop placeholders"
+git -C "$rel" tag v-missing
+if ( cd "$rel" && scripts/release-skill.sh v-missing ) >"$TMP/rel.out" 2>"$TMP/rel.err"; then
+  echo "release-skill.sh accepted a skill with no placeholders" >&2
+  exit 1
+fi
+grep -q "placeholder missing" "$TMP/rel.err"
 
 if [ "$FEED_BEFORE" -eq 0 ] && [ -e /workspace/grokbot-widget-feed ]; then
   echo "a test created /workspace/grokbot-widget-feed" >&2
