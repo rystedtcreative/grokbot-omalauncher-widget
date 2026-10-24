@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+.Python
+.venv/
+venv/
+.env
+.env.*
+*.pem
+id_ed25519
+id_rsa
+id_ecdsa
+*.log
