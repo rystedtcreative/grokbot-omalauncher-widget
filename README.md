@@ -29,7 +29,7 @@ You'll need:
 - a free GitHub account
 - about 10 minutes
 
-Import the Widgety setup bot template and say hi. It asks one thing at a time, explains each step in plain words, and does the technical work for you. You'll do two things yourself: sign in to GitHub when it hands you the screen, and copy one line from your phone back to it.
+Import the Omaha setup bot template and say hi. It asks one thing at a time, explains each step in plain words, and does the technical work for you. You'll do two things yourself: sign in to GitHub when it hands you the screen, and copy one line from your phone back to it.
 
 It will never ask for a password, a GitHub token or a private key. If anything asks you for one, stop.
 
