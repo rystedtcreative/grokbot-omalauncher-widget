@@ -1,0 +1,96 @@
+# Grok Bot Omalauncher Widget for Android
+
+*Your Grok Bots, on your Android home screen, in Omalauncher*
+
+A Grok Bot setup for a home-screen widget in [Omalauncher](https://github.com/SimonSchubert/omalauncher) on Android. You need an Android phone with Omalauncher installed.
+
+Pin your favorite bots, scroll the rest, and tap any bot to open its chat. Unread dots show you which bots have something new, so you don't have to open the app to check.
+
+Setup takes one conversation. Import Omaha, the setup bot, answer a few questions, and it builds everything on your Grok Bot computer. Your bot list goes only to a private GitHub repo you own, and your phone gets read-only access to it. Nothing passes through us.
+
+![Grok Bot Omalauncher Widget intro: your Grok Bots on your Android home screen, with unread counts](docs/intro.gif)
+
+
+## How it works
+
+```mermaid
+flowchart LR
+  agents["Bots on your computer"] --> publish["publish-feed.sh"]
+  publish --> repo["Your private GitHub repo"]
+  repo --> phone["Phone, read-only deploy key"]
+  phone --> widget["Omalauncher widget"]
+  widget --> app["Grok Bot app"]
+```
+
+The feed is `index.json` (schema version 1) plus 128×128 avatar thumbnails. Descriptions are left out unless you opt in. Server ids, harness, voice ids, secrets, skills, and memory are never written.
+
+## Quick start
+
+You'll need:
+- an Android phone with Omalauncher, with its optional Linux installed (the widget runs `git` there)
+- a free GitHub account
+- about 10 minutes
+
+Import the Omaha setup bot template and say hi. It asks one thing at a time, explains each step in plain words, and does the technical work for you. You'll do three things yourself: sign in to GitHub when it hands you the screen, copy one line from your phone back to it, and paste the one line it gives you into Omalauncher's terminal. That line downloads the widget, checks it hasn't been tampered with, and puts it on page 2 of your home screen.
+
+It will never ask for a password, a GitHub token or a private key. If anything asks you for one, stop.
+
+## Manual install
+
+You need Python 3, `git`, and the GitHub CLI (`gh`) on the Grok Bot computer. Pillow (`pip install Pillow`) is optional; without it, avatars are skipped and the widget draws a mark from each bot's color and shape. The phone needs Omalauncher with `git` and `openssh`, plus notification access if you want unread dots.
+
+1. Clone a **pinned tag** of this repository. Do not follow a moving branch.
+2. Check the tree before you run anything:
+
+   ```sh
+   sha256sum -c checksums.txt
+   ```
+
+   Stop if any line is not `OK`.
+3. Publish the feed. `OWNER/NAME` must be private. The script refuses a public repo, creates one private repo if it is missing, and pushes only when the feed changed.
+
+   ```sh
+   scripts/publish-feed.sh --repo OWNER/NAME
+   ```
+
+   The checkout on this computer is `/workspace/grokbot-widget-feed`.
+4. On the phone, in Omalauncher's terminal:
+
+   ```sh
+   ssh-keygen -t ed25519 -f ~/grokbot-feed -N ""
+   cat ~/grokbot-feed.pub
+   ```
+
+   On the computer, add that single public line as a read-only deploy key:
+
+   ```sh
+   scripts/add-phone-key.sh --repo OWNER/NAME
+   ```
+
+5. Print the phone's install line, then paste it into Omalauncher's terminal. Add `--pin "Bot Name"` to pin one bot at the top.
+
+   ```sh
+   scripts/phone-install-line.sh --repo OWNER/NAME --ref v0.1.0
+   ```
+
+   The line downloads `widget/grokbot.owl` from that tag, checks its sha256 against this checkout, fills in your feed repo and pin, and writes it to `~/.config/omalauncher/widgets/grokbot.owl`. Omalauncher loads it on page 2. It installs nothing if the check fails. To change the refresh interval (`every 10m`), edit that file on the phone.
+
+Run `scripts/publish-feed.sh` again whenever bots change, or schedule it every few hours and stay quiet unless it fails. `scripts/update-checksums.sh` rewrites `checksums.txt` after you change the widget or the scripts. Run it before you tag a release.
+
+`--include-descriptions` adds scrubbed descriptions. Leave it off. Descriptions often contain private instructions, and scrubbing can miss a secret.
+
+## Security, in short
+
+Your bot list only goes to places you control:
+
+- **Your Grok Bot computer**, which already holds your bots. It builds the list.
+- **Your private GitHub repo.** The setup refuses to use a public one, and every refresh checks again, so keep it private. If it's ever made public, refreshes stop until you make it private again.
+- **Your phone**, which can read that repo but can't change it.
+
+The list holds names, titles, avatars and colors. It never includes your bots' instructions, memory, skills or secrets. Descriptions stay off unless you turn them on. There's no server, account or relay run by the kit's author. For the full details and how to report a problem, see [SECURITY.md](SECURITY.md).
+
+
+
+---
+
+Made by Joshua Rystedt at [R Creative](https://rcreative.ai), where we build websites, web apps and AI agents.
