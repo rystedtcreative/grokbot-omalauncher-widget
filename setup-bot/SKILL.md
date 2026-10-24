@@ -1,58 +1,78 @@
 ---
 name: omalauncher-widget-setup
-description: use this when the user wants an Omalauncher home-screen widget of their Grok Bots, or asks to set up, install, refresh, or remove that private widget feed.
+description: use this when the user wants an Omalauncher home-screen widget of their Grok Bots on Android, or asks to set up, install, refresh, or remove that private widget feed.
 ---
 
 # Omalauncher widget setup
 
 ## First message
 
-Open with this, then ask question 1:
+"Hi! I'll set up a home-screen widget of your Grok Bots in Omalauncher on your Android phone. It takes 10 to 20 minutes. We'll go one step at a time, and I'll wait for you after each one. Your bot list stays in a private GitHub repo you own. I'll never ask for a password or a token. First: is your phone Android 10 or newer, with a 64-bit (arm64) processor?"
 
-"Hi! I'll set up a home-screen widget of your Grok Bots on your Android phone. It takes about 10 minutes. I do the technical parts. You'll just sign in to GitHub once, copy one line from your phone, and paste one line into it. Your bot list stays in a private GitHub repo you own. I'll never ask for a password or a token. First question: do you have Omalauncher installed on your Android phone?"
+## Rules
 
-Set up a private home-screen widget of this user's own Grok Bots, on their computer. One question at a time. Wait for the answer before the next step. Do not batch questions. Do not ask for a GitHub token, a password, or a private SSH key.
+- ONE step per message. Say exactly what to tap or paste, put anything to paste alone in its own code block, and say what they should see. Then wait for them to confirm or paste what they see. Never skip ahead.
+- If something fails, diagnose it with them (see Troubleshooting) before moving on.
+- Never ask for a GitHub token, a password, or a private SSH key. Never print tokens.
+- Do not show commands they don't run themselves.
 
-Kit repository: `https://github.com/rystedtcreative/grokbot-omalauncher-widget`, pinned release tag `v0.1.0`.
+Kit: `https://github.com/rystedtcreative/grokbot-omalauncher-widget`, pinned tag `v0.1.0`. You see bot names, titles, avatars, colors, shapes and groups here, and the feed repo's visibility through `gh`. Never publish server ids, harness, voice ids, secrets, skills, memory, or descriptions (unless opted in). Nothing goes to the kit author.
 
-## What this bot can and cannot see
+## Prerequisites (one per message)
 
-On this computer you can see bot names, titles, avatar images, colors, shapes, and which folders are groups. Through GitHub CLI you can see the visibility of the feed repo they name.
-
-Do not publish descriptions unless they explicitly opt in. Never publish server ids, harness, voice ids, secrets, skills, or memory. Never ask them to paste a token or a private key. The phone gets a read-only deploy key. Nothing is sent to the kit author. The feed stays on this computer and in their private repository.
+1. Android 10+, arm64. If not: "This widget only works in Omalauncher on Android 10+ with arm64, so I'll stop here."
+2. Omalauncher installed from Google Play and set as home screen. If not, ask them to install it and message you back.
+3. Omalauncher's Linux turned on (look in Omalauncher's settings for Linux). The widget runs `git` there. The first download can take a while.
+4. Grok Bot Android app installed and signed in.
+5. A GitHub account. If none: "Make a free one at github.com, then come back."
 
 ## Steps
 
-Explain each step in one plain sentence before you do it, and never show the user a command unless they have to run it themselves. Suggested wording is in quotes.
+1. Run `gh auth status`. If it fails: "I'll hand you my computer screen. Sign in to GitHub the normal way, then hand it back. Don't paste a token." Hand over with the box-help handoff and have them run `gh auth login` (browser or device code). Re-check; if it still fails, stop.
 
-1. Ask whether they use Omalauncher on Android. If they do not, say: "This widget only works in Omalauncher on Android for now, so I'll stop here. If you install it later, just message me again." The widget needs Omalauncher's optional Linux (settings › linux) because it runs `git`; if they don't have it, ask them to install it first.
+2. "What should I call your private repo? I suggest grokbot-widget-feed. Say 'sounds good' to use it." Confirm `OWNER/NAME` once. It must stay private.
 
-2. Run `gh auth status` on this computer. If it fails, say: "Next I need you to sign in to GitHub on my computer. That's where your private bot list will live. I'll hand you the screen now. Sign in the normal way, then hand it back." If they have no account: "You'll need a free GitHub account first. Make one at github.com, then come back." Then hand them the computer with the app's box-help handoff and tell them to run `gh auth login` (browser or device code). Do not ask them to paste a token. When they hand it back, run `gh auth status` again. If it still fails, stop.
-
-3. Ask: "What should I call your private repo? I'd suggest grokbot-widget-feed. Just say 'sounds good' to use it." The default name is `grokbot-widget-feed`, so the argument is `OWNER/grokbot-widget-feed` under their GitHub user. It must stay private. Confirm the full `OWNER/NAME` once.
-
-4. Say once for steps 4 to 6: "I'm installing the widget files, checking they haven't been tampered with, and building your bot list. I'll also refresh it every 3 hours and only message you if something breaks." Install the pinned release, never a branch: `git clone --depth 1 --branch v0.1.0 https://github.com/rystedtcreative/grokbot-omalauncher-widget /workspace/grokbot-omalauncher-widget` (if it already exists, `git -C` it to fetch and check out that tag).
-   Stop and run nothing unless these match. If either value below still reads `__EXPECTED_...__` (an unreleased copy), stop and tell them this copy of the setup bot isn't a finished release; never skip the check.
+3. "Nothing for you to do: I'm installing the widget files, checking they haven't been tampered with, and building your bot list." Install the pinned tag, never a branch: `git clone --depth 1 --branch v0.1.0 https://github.com/rystedtcreative/grokbot-omalauncher-widget /workspace/grokbot-omalauncher-widget` (if present, fetch and check out that tag).
+   Run nothing unless these match. If either still reads `__EXPECTED_...__`, stop: this copy isn't a finished release. Never skip the check.
    EXPECTED_COMMIT=__EXPECTED_COMMIT__
    EXPECTED_CHECKSUMS_SHA256=__EXPECTED_CHECKSUMS_SHA256__
    `git -C /workspace/grokbot-omalauncher-widget rev-parse HEAD` equals EXPECTED_COMMIT. There, `sha256sum checksums.txt` equals EXPECTED_CHECKSUMS_SHA256 (first field). Then `sha256sum -c checksums.txt`; every line must say OK.
+   Then run `scripts/publish-feed.sh --repo OWNER/NAME`. No `--include-descriptions` unless they ask; if they do, warn that descriptions can hold private instructions and scrubbing can miss a secret. If it says the repo isn't private, stop. Never make it public.
+   Create a routine running that publish command from the kit directory every 3 hours. Quiet on exit 0; on failure, message the error text (no tokens).
 
-5. From that directory run `scripts/publish-feed.sh --repo OWNER/NAME`. Do not pass `--include-descriptions` unless they explicitly ask. If they ask, warn that descriptions can hold private instructions: scrubbing removes values that look like secrets and can still miss some. If the script says the repo is not private, stop. Do not make it public. Do not print tokens.
+4. "Open Omalauncher's terminal (Super+T with a keyboard, or a terminal tile). Paste this and press Enter:"
+   ```
+   ssh-keygen -t ed25519 -f ~/grokbot-feed -N ""
+   ```
+   "You'll see a few lines ending in a box of symbols. Tell me when you do."
 
-6. Create a routine that runs `scripts/publish-feed.sh --repo OWNER/NAME` from the kit directory every 3 hours. Stay quiet when it exits 0. Message them only when it fails, with the error text and no tokens.
+5. "Now paste this. You'll see one line starting with ssh-ed25519. Send me that line. It's safe to share. Never send anything with PRIVATE KEY in it."
+   ```
+   cat ~/grokbot-feed.pub
+   ```
+   If the paste contains `PRIVATE KEY`, reject it and ask for the `.pub` line. Pipe the line on stdin to `scripts/add-phone-key.sh --repo OWNER/NAME`. Tell them only after it prints "read-only deploy key added".
 
-7. Say: "Now one step on your phone. In Omalauncher, open the terminal and paste this exactly, then the second line. Copy the one line it shows (it starts with ssh-ed25519) and send it to me. That line is safe to share. It just lets your phone read your list." The commands make a new key that does not overwrite another key:
-   `ssh-keygen -t ed25519 -f ~/grokbot-feed -N ""`
-   Ask them to paste only the one line from `cat ~/grokbot-feed.pub` (it starts with `ssh-ed25519`). If the paste contains `PRIVATE KEY`, reject it and ask again for the `.pub` line. Then run `scripts/add-phone-key.sh --repo OWNER/NAME` with that line on stdin. The script adds a read-only deploy key.
+6. "Want one bot pinned at the top? Tell me its exact name, or say none."
 
-8. Ask: "Want one bot pinned at the top? Tell me its name, or say none." From the kit directory run `scripts/phone-install-line.sh --repo OWNER/NAME --ref v0.1.0`, adding `--pin "EXACT NAME"` if they named one. If it refuses the name, ask for it again. Send the one line it prints, in a code block, with: "Last step on your phone: paste this one line into Omalauncher's terminal. It downloads the widget, checks it hasn't been tampered with, and adds it to your home screen on page 2." Then: "If Omalauncher asks for notification access, allow it. That's what shows unread dots."
+7. Run `scripts/phone-install-line.sh --repo OWNER/NAME --ref v0.1.0` (plus `--pin "EXACT NAME"`; if refused, ask again). Send the line alone in a code block: "Paste this whole line into Omalauncher's terminal. You should see: Grok Bot widget installed. Look on page 2." Anything else: Troubleshooting.
+
+8. "Go to page 2. Do you see the widget?" Then: "If it says allow notification access to show unread, tap it and allow it. That shows unread dots." Then: "Tap a bot. Does its chat open?" Only after they confirm all three, say you're done. Pin changes later: rerun step 7 with the new pin; pasting overwrites the widget. "Refresh now": rerun the publish command; the widget picks it up within 10 minutes.
+
+## Troubleshooting
+
+- "Install failed. Nothing was changed.": no internet; curl missing (have them paste `pacman -S --needed curl coreutils git openssh`, answer Y if it asks, then the line again); partial paste (resend the line); release unreachable (retry later).
+- "Stopped: the widget file failed its tamper check.": stop, don't work around it, and report it.
+- No widget: check page 2; have them paste `ls ~/.config/omalauncher/widgets/grokbot.owl`; if missing, resend the install line.
+- "can't read the bot feed" or no bots: check the deploy key exists and the repo name matches the install line; the widget refreshes every 10 minutes; rerun the publish command.
+- No unread dots: Omalauncher notification access, and Grok Bot app notifications on.
+- Tap doesn't open chat: Grok Bot app installed and signed in to the same account.
 
 ## Uninstall
 
-Ask which of these they want, then do only those. Do not delete the repo, the key, or the routine without an explicit yes.
+Ask which parts they want, then do only those. Nothing is deleted without an explicit yes.
 
-- Deploy key: `gh repo deploy-key list --repo OWNER/NAME`, then `gh repo deploy-key delete ID --repo OWNER/NAME` for the phone key.
-- Routine: delete the publish routine from step 6.
-- Feed repo: only if they ask, `gh repo delete OWNER/NAME`. Say that this removes the feed from GitHub.
-- Phone: they can delete `~/grokbot-feed`, `~/grokbot-feed.pub`, and `~/.config/omalauncher/widgets/grokbot.owl`.
-- This computer: if they ask, delete `/workspace/grokbot-widget-feed` and the kit clone.
+- Deploy key: `gh repo deploy-key list --repo OWNER/NAME`, then `gh repo deploy-key delete ID --repo OWNER/NAME`.
+- Routine: delete the 3-hour publish routine.
+- Feed repo: only if asked, `gh repo delete OWNER/NAME`; say it removes the feed from GitHub.
+- Phone: they paste `rm ~/grokbot-feed ~/grokbot-feed.pub ~/.config/omalauncher/widgets/grokbot.owl`.
+- This computer: if asked, delete `/workspace/grokbot-widget-feed` and the kit clone.
