@@ -1,8 +1,10 @@
-# Grok Bot widget for Omalauncher
+# Your Grok Bots, on your home screen
 
-A home-screen widget of your Grok Bots, built for [Omalauncher](https://omalauncher.app) (the OWL widget language). You tap a bot and it opens in the Grok Bot app. Unread Grok Bot notifications show on the row.
+*Grok Bot Home Widget, for Omalauncher*
 
-Your bots are listed from a feed that **your** Grok Bot computer builds and pushes to **your** private GitHub repository. The phone clones that repository with a **read-only** deploy key. The author of this kit does not host the feed, the widget data, or an account in the middle.
+A Grok Bot widget for [Omalauncher](https://github.com/SimonSchubert/omalauncher) on Android. Pin your favorite bots, scroll the rest, and tap any bot to open its chat. Unread dots show you which bots have something new, so you don't have to open the app to check.
+
+Setup takes one conversation. Import the setup bot, answer a few questions, and it builds everything on your Grok Bot computer. Your bot list goes only to a private GitHub repo you own, and your phone gets read-only access to it. Nothing passes through us.
 
 ![Widget on a home screen](docs/screenshot.svg)
 
@@ -23,9 +25,14 @@ The feed is `index.json` (schema version 1) plus 128×128 avatar thumbnails. Des
 
 ## Quick start
 
-Import the setup bot template (the bot whose skill is `omalauncher-widget-setup`) and follow it. It asks one question at a time: Omalauncher on Android, GitHub CLI login, a private repo name, a pinned release, the phone's public key, and which bot to pin.
+You'll need:
+- an Android phone with Omalauncher, with its optional Linux installed (the widget runs `git` there)
+- a free GitHub account
+- about 10 minutes
 
-It will not ask you to paste a GitHub token or a private key. If `gh` is not logged in, it hands you the computer so you can run `gh auth login` yourself.
+Import the Widgety setup bot template and say hi. It asks one thing at a time, explains each step in plain words, and does the technical work for you. You'll do two things yourself: sign in to GitHub when it hands you the screen, and copy one line from your phone back to it.
+
+It will never ask for a password, a GitHub token or a private key. If anything asks you for one, stop.
 
 ## Manual install
 
@@ -65,12 +72,18 @@ Run `scripts/publish-feed.sh` again whenever bots change, or schedule it every f
 
 `--include-descriptions` adds scrubbed descriptions. Leave it off. Descriptions often contain private instructions, and scrubbing can miss a secret.
 
-## Security model
+## Security, in short
 
-Your data stays in three places you control:
+Your bot list only goes to places you control:
 
-- the Grok Bot computer, which already has your bots
-- your private GitHub repository
-- your phone, which can only read that repository
+- **Your Grok Bot computer**, which already holds your bots. It builds the list.
+- **Your private GitHub repo.** The setup refuses to use a public one.
+- **Your phone**, which can read that repo but can't change it.
 
-Nothing is hosted by the author of this kit. Details, residual risk, and how to report a problem are in [SECURITY.md](SECURITY.md). The license is [MIT](LICENSE).
+The list holds names, titles, avatars and colors. It never includes your bots' instructions, memory, skills or secrets. Descriptions stay off unless you turn them on. There's no server, account or relay run by the kit's author. For the full details and how to report a problem, see [SECURITY.md](SECURITY.md).
+
+
+
+---
+
+Made by Joshua Rystedt at [R Creative](https://rcreative.ai), where we build websites, web apps and AI agents.

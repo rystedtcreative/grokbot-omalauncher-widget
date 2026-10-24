@@ -37,4 +37,4 @@ Notification matching uses the bot id and name against notification titles from 
 
 ## Reporting
 
-Open a private security advisory on this repository. If the repository has no advisory form, contact the maintainer in private. Do not open a public issue for a vulnerability, and do not include a live feed, a token, or a private key in the report.
+Report it privately with GitHub's **Report a vulnerability** button on this repository's Security tab. Do not open a public issue for a vulnerability, and do not include a live feed, a token, or a private key in the report.

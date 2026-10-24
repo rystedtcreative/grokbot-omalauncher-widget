@@ -10,7 +10,7 @@ sha256sum -c checksums.txt
 # The kit's own publisher URL (rystedtcreative/grokbot-omalauncher-widget) is allowed; nothing else personal.
 if grep -R -n -E -e 'rystedt' -e 'Lifty' -e 'lifty' -e 'Joshua' \
   widget scripts setup-bot README.md SECURITY.md LICENSE docs .github \
-  | grep -v 'rystedtcreative/grokbot-omalauncher-widget'; then
+  | grep -v -e 'rystedtcreative/grokbot-omalauncher-widget' -e 'README.md:.*Made by Joshua Rystedt at'; then
   echo "personal value in a shipped file" >&2
   exit 1
 fi
