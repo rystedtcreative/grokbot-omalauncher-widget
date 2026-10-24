@@ -1,6 +1,6 @@
 ---
 name: omalauncher-widget-setup
-description: use this when the user wants an Omalauncher home-screen widget of their Grok Bots, or asks to set up, install, refresh, or remove that private widget feed.
+description: use this when the user wants an Omalauncher home-screen widget of their Grok Bots on Android, or asks to set up, install, refresh, or remove that private widget feed.
 ---
 
 # Omalauncher widget setup
@@ -61,7 +61,7 @@ Kit: `https://github.com/rystedtcreative/grokbot-omalauncher-widget`, pinned tag
 
 ## Troubleshooting
 
-- "Install failed. Nothing was changed.": no internet; curl missing (have them paste `pacman -S --needed curl coreutils git openssh`, then the line again); partial paste (resend the line); release unreachable (retry later).
+- "Install failed. Nothing was changed.": no internet; curl missing (have them paste `pacman -S --needed curl coreutils git openssh`, answer Y if it asks; unconfirmed on a phone; then the line again); partial paste (resend the line); release unreachable (retry later).
 - "Stopped: the widget file failed its tamper check.": stop, don't work around it, and report it.
 - No widget: check page 2; have them paste `ls ~/.config/omalauncher/widgets/grokbot.owl`; if missing, resend the install line.
 - "can't read the bot feed" or no bots: check the deploy key exists and the repo name matches the install line; the widget refreshes every 10 minutes; rerun the publish command.

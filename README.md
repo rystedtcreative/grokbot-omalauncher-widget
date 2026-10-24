@@ -6,7 +6,7 @@ A Grok Bot setup for a home-screen widget in [Omalauncher](https://github.com/Si
 
 Pin your favorite bots, scroll the rest, and tap any bot to open its chat. Unread dots show you which bots have something new, so you don't have to open the app to check.
 
-Setup takes one conversation. Import Omaha, the setup bot, answer a few questions, and it builds everything on your Grok Bot computer. Your bot list goes only to a private GitHub repo you own, and your phone gets read-only access to it. Nothing passes through us.
+Setup takes one conversation. Add Omaha, the setup bot, answer a few questions, and it builds everything on your Grok Bot computer. Your bot list goes only to a private GitHub repo you own, and your phone gets read-only access to it. Nothing passes through us.
 
 ![Grok Bot Omalauncher Widget intro: your Grok Bots on your Android home screen, with unread counts](docs/intro.gif)
 
@@ -107,7 +107,7 @@ If you see something else, go to [Troubleshooting](#troubleshooting).
 ### 10. Find the widget and finish up
 
 - Swipe to page 2 of your home screen. The widget appears there by itself. The first load can take a minute.
-- If it says "allow notification access to show unread", tap that line and allow Omalauncher's notification access. That's what shows the unread dots.
+- If it says "allow notification access to show unread", tap that line and allow Omalauncher's notification access. That's what shows the unread dots. (Unread dots are confirmed on one phone so far.)
 - Tap a bot. Its chat opens in the Grok Bot app.
 
 Tell Omaha it worked. You're done.
@@ -132,6 +132,7 @@ Your phone is as it was. Common causes:
   ```sh
   pacman -S --needed curl coreutils git openssh
   ```
+  If it asks to proceed, answer Y. (Not yet confirmed on a phone, including whether it needs `sudo`.)
 - Only part of the line was pasted. Copy the whole line from Omaha again.
 - The widget download couldn't be reached. Wait a few minutes and try again, or tell Omaha.
 
@@ -153,6 +154,7 @@ Stop. Don't try to get around it. Tell Omaha what you saw.
 - Still stuck? Ask Omaha to check the feed.
 
 **No unread dots**
+(Unread dots are confirmed on one phone so far.)
 - Allow Omalauncher's notification access (tap the "allow notification access" line on the widget).
 - Turn on notifications for the Grok Bot app.
 
